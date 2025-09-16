@@ -10,11 +10,31 @@ namespace alquerque
     {
         MatrixGraph graph = new MatrixGraph();
 
+        private Array[,] board = new Array[13, 17];
         private Dictionary<string, string> positions = new Dictionary<string, string>();    // " " = empty, 1 = player1, 2 = player2
         private bool isPlayer1Turn = true;
 
         public void StartGame()
         {
+            // add all vertices
+            string[] vertices = {
+                "a1", "a2",
+                "b1", "b2", "b3", "b4", "b5",
+                "c1", "c2",
+                "d1", "d2", "d3", "d4", "d5", "d6", "d7",
+                "e1", "e2",
+                "f1", "f2", "f3", "f4", "f5", "f6", "f7",
+                "g1",
+                "h1", "h2", "h3", "h4", "h5", "h6", "h7",
+                "i1", "i2",
+                "j1", "j2", "j3", "j4", "j5", "j6", "j7",
+                "k1", "k2",
+                "l1", "l2", "l3", "l4", "l5", "l6", "l7",
+                "m1", "m2"
+            };
+            foreach (var v in vertices)
+                graph.AddVertex(v);
+
             // do connnections
             graph.AddEdge("a1", "b1"); graph.AddEdge("a1", "b2");
             graph.AddEdge("a2", "b4"); graph.AddEdge("a2", "b5");
@@ -69,9 +89,17 @@ namespace alquerque
             graph.AddEdge("m2", "l4"); graph.AddEdge("m2", "l5");
 
             // initialize positions
+            int count = 0;
             foreach (var node in graph.Vertices)
             {
-                positions[node] = " ";
+                if (count < 25)
+                    positions[node] = "X";
+                else if (count == 25)
+                    positions[node] = " ";
+                else
+                    positions[node] = "O";
+
+                count++;
             }
 
             DrawBoard();
@@ -79,11 +107,44 @@ namespace alquerque
 
         private void DrawBoard()
         {
-            foreach (var node in graph.Vertices)
-            {
-                Console.Write($"{node.ToString()} ");
-            }
-            Console.WriteLine();
+            Console.Clear();
+
+            Console.WriteLine($"                    {GetNode("a1")}              {GetNode("a2")}");
+            Console.WriteLine($"                   /   |               |   \\");
+            Console.WriteLine($"                 /     |               |     \\");
+            Console.WriteLine($"               /       |               |       \\");
+            Console.WriteLine($"           {GetNode("b1")}-----{GetNode("b2")}     {GetNode("b3")}     {GetNode("b4")}-----{GetNode("b5")}");
+            Console.WriteLine($"          / |  \\    /  |    / |  \\     |  \\    /  | \\");
+            Console.WriteLine($"        /   |   {GetNode("c1")}   |  /   |    \\   |   {GetNode("c2")}   |   \\");
+            Console.WriteLine($"      /     |  /    \\  |/     |      \\ |  /    \\  |     \\");
+            Console.WriteLine($"  {GetNode("d1")}-----{GetNode("d2")}-----{GetNode("d3")}     {GetNode("d4")}     {GetNode("d5")}-----{GetNode("d6")}-----{GetNode("d7")}");
+            Console.WriteLine($"     \\    / |  \\       |    / |  \\     |      /   |\\    /");
+            Console.WriteLine($"      {GetNode("e1")}  |    \\     |  /   |    \\   |    /     | {GetNode("e2")}");
+            Console.WriteLine($"     /    \\ |      \\   |/     |      \\ |  /       |/    \\");
+            Console.WriteLine($"  {GetNode("f1")}-----{GetNode("f2")}-----{GetNode("f3")}-----{GetNode("f4")}-----{GetNode("f5")}-----{GetNode("f6")}-----{GetNode("f7")}");
+            Console.WriteLine($"            |           \\     |      /            |");
+            Console.WriteLine($"            |              \\  |   /                |");
+            Console.WriteLine($"            |                {GetNode("g1")}                 |");
+            Console.WriteLine($"            |              /  |   \\                |");
+            Console.WriteLine($"            |           /     |      \\            |");
+            Console.WriteLine($"  {GetNode("h1")}-----{GetNode("h2")}-----{GetNode("h3")}-----{GetNode("h4")}-----{GetNode("h5")}-----{GetNode("h6")}-----{GetNode("h7")}");
+            Console.WriteLine($"      \\  /  |     /    | \\          /  |   \\      | \\  / ");
+            Console.WriteLine($"      {GetNode("i1")}  |    /     |  \\        /   |    \\     | {GetNode("i2")}");
+            Console.WriteLine($"      /  \\  |   /      |   \\      /    |     \\    | /  \\ ");
+            Console.WriteLine($"  {GetNode("j1")}-----{GetNode("j2")}-----{GetNode("j3")}     {GetNode("j4")}     {GetNode("j5")}-----{GetNode("j6")}-----{GetNode("j7")}");
+            Console.WriteLine($"       \\    |   \\  /   | \\     |    /  |   \\  /   |    / ");
+            Console.WriteLine($"        \\   |   {GetNode("k1")}   |  \\    |   /   |  {GetNode("k2")}    |   /");
+            Console.WriteLine($"         \\  |   /  \\   |   \\   |  /    |   /  \\   |  /");
+            Console.WriteLine($"           {GetNode("l1")}-----{GetNode("l2")}     {GetNode("l3")}     {GetNode("l4")}-----{GetNode("l5")}");
+            Console.WriteLine($"               \\       |               |       /");
+            Console.WriteLine($"                 \\     |               |     /");
+            Console.WriteLine($"                   \\   |               |   /");
+            Console.WriteLine($"                    {GetNode("m1")}              {GetNode("m2")}");
+        }
+
+        private string GetNode(string name)
+        {
+            return $"{name}:{positions[name]}";
         }
     }
 }
