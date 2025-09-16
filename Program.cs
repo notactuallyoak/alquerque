@@ -9,7 +9,9 @@ namespace alquerque
         static void Main()
         {
             Game game = new Game();
-            game.StartGame();
+            game.SetupGame();
+
+            game.DrawBoard();
         }
     }
 }

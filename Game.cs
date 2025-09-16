@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,12 +11,15 @@ namespace alquerque
     {
         MatrixGraph graph = new MatrixGraph();
 
-        private Array[,] board = new Array[13, 17];
-        private Dictionary<string, string> positions = new Dictionary<string, string>();    // " " = empty, 1 = player1, 2 = player2
-        private bool isPlayer1Turn = true;
+        private Dictionary<string, string> positions = new Dictionary<string, string>(); // " " = empty, 1 = player1, 2 = player2
+        private bool isPlayer1Turn = true; // X, O
 
-        public void StartGame()
+        public void SetupGame()
         {
+            // random turn
+            Random random = new Random((int)DateTime.Now.Ticks);
+            isPlayer1Turn = random.Next(0, 2) == 0;
+
             // add all vertices
             string[] vertices = {
                 "a1", "a2",
@@ -101,11 +105,9 @@ namespace alquerque
 
                 count++;
             }
-
-            DrawBoard();
         }
 
-        private void DrawBoard()
+        public void DrawBoard()
         {
             Console.Clear();
 
@@ -123,9 +125,9 @@ namespace alquerque
             Console.WriteLine($"     /    \\ |      \\   |/     |      \\ |  /       |/    \\");
             Console.WriteLine($"  {GetNode("f1")}-----{GetNode("f2")}-----{GetNode("f3")}-----{GetNode("f4")}-----{GetNode("f5")}-----{GetNode("f6")}-----{GetNode("f7")}");
             Console.WriteLine($"            |           \\     |      /            |");
-            Console.WriteLine($"            |              \\  |   /                |");
+            Console.WriteLine($"            |              \\  |   /               |");
             Console.WriteLine($"            |                {GetNode("g1")}                 |");
-            Console.WriteLine($"            |              /  |   \\                |");
+            Console.WriteLine($"            |              /  |   \\               |");
             Console.WriteLine($"            |           /     |      \\            |");
             Console.WriteLine($"  {GetNode("h1")}-----{GetNode("h2")}-----{GetNode("h3")}-----{GetNode("h4")}-----{GetNode("h5")}-----{GetNode("h6")}-----{GetNode("h7")}");
             Console.WriteLine($"      \\  /  |     /    | \\          /  |   \\      | \\  / ");
@@ -140,6 +142,91 @@ namespace alquerque
             Console.WriteLine($"                 \\     |               |     /");
             Console.WriteLine($"                   \\   |               |   /");
             Console.WriteLine($"                    {GetNode("m1")}              {GetNode("m2")}");
+            Console.WriteLine();
+            Console.WriteLine($"<Player {(isPlayer1Turn ? 1 : 2)}'s Turn>");
+        }
+
+        public bool Move(string from, string to)
+        {
+            if (!positions.ContainsKey(from) || !positions.ContainsKey(to)) return false;
+            string currentPlayer = isPlayer1Turn ? "X" : "O";
+
+            if (positions[from] != currentPlayer) return false;
+
+            foreach (var enemy in graph.GetNeighbors(from))
+            {
+                foreach (var landing in graph.GetNeighbors(enemy))
+                {
+                    if (CanCapture(from, enemy, landing) && landing == to)
+                    {
+                        positions[enemy] = " ";
+                        positions[to] = currentPlayer;
+                        positions[from] = " ";
+
+                        if (!TryMultipleCaptures(to, currentPlayer))
+                            isPlayer1Turn = !isPlayer1Turn;
+
+                        return true;
+                    }
+                }
+            }
+
+            if (CanMove(from, to))
+            {
+                positions[to] = currentPlayer;
+                positions[from] = " ";
+                isPlayer1Turn = !isPlayer1Turn;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CanCapture(string from, string enemy, string landing)
+        {
+            return positions.ContainsKey(from) &&
+                   positions.ContainsKey(enemy) &&
+                   positions.ContainsKey(landing) &&
+                   positions[from] != " " &&
+                   positions[enemy] != " " &&
+                   positions[from] != positions[enemy] &&
+                   positions[landing] == " " &&
+                   graph.HasEdge(from, enemy) &&
+                   graph.HasEdge(enemy, landing);
+        }
+
+        private bool CanMove(string from, string to)
+        {
+            return positions.ContainsKey(from) &&
+                   positions.ContainsKey(to) &&
+                   positions[to] == " " &&
+                   graph.HasEdge(from, to);
+        }
+
+        private bool TryMultipleCaptures(string from, string currentPlayer)
+        {
+            foreach (var enemy in graph.GetNeighbors(from))
+            {
+                foreach (var landing in graph.GetNeighbors(enemy))
+                {
+                    if (positions.ContainsKey(enemy) && positions.ContainsKey(landing))
+                    {
+                        if (positions[enemy] != " " &&
+                            positions[enemy] != currentPlayer &&
+                            positions[landing] == " " &&
+                            graph.HasEdge(from, enemy) &&
+                            graph.HasEdge(enemy, landing))
+                        {
+                            positions[enemy] = " ";
+                            positions[landing] = currentPlayer;
+                            positions[from] = " ";
+
+                            return TryMultipleCaptures(landing, currentPlayer) || true;
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
         private string GetNode(string name)
