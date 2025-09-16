@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.ComponentModel.Design;
 using System.Xml.Linq;
 
 namespace alquerque
@@ -9,9 +10,7 @@ namespace alquerque
         static void Main()
         {
             Game game = new Game();
-            game.SetupGame();
-
-            game.DrawBoard();
+            game.Menu();
         }
     }
 }

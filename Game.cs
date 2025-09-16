@@ -92,8 +92,8 @@ namespace alquerque
             graph.AddEdge("m1", "l1"); graph.AddEdge("m1", "l2");
             graph.AddEdge("m2", "l4"); graph.AddEdge("m2", "l5");
 
-            // initialize positions
-            int count = 0;
+                // initialize positions
+                int count = 0;
             foreach (var node in graph.Vertices)
             {
                 if (count < 25)
@@ -107,10 +107,35 @@ namespace alquerque
             }
         }
 
+        public void Menu()
+        {
+            Console.WriteLine("-- Select Gamemodes --");
+            Console.WriteLine("    1.PvP (local)");
+            Console.WriteLine("    2.PvE (bot)");
+            Console.WriteLine("    3.Quit");
+            Console.WriteLine();
+
+            Console.Write("> ");
+            var input = Console.ReadLine().ToLower();
+
+            switch (input)
+            {
+                case "1":
+                    PVP pvp = new PVP();
+                    pvp.Start();
+                    break;
+                case "2":
+                    // soon
+                    break;
+                case "3":
+                    Environment.Exit(0);
+                    break;
+            }
+        }
+
         public void DrawBoard()
         {
             Console.Clear();
-
             Console.WriteLine($"                    {GetNode("a1")}              {GetNode("a2")}");
             Console.WriteLine($"                   /   |               |   \\");
             Console.WriteLine($"                 /     |               |     \\");
@@ -143,7 +168,7 @@ namespace alquerque
             Console.WriteLine($"                   \\   |               |   /");
             Console.WriteLine($"                    {GetNode("m1")}              {GetNode("m2")}");
             Console.WriteLine();
-            Console.WriteLine($"<Player {(isPlayer1Turn ? 1 : 2)}'s Turn>");
+            Console.WriteLine($"Player {(isPlayer1Turn ? 1 : 2)}'s Turn ({(isPlayer1Turn ? "X" : "O")}) (type q or quit to give up)");
         }
 
         public bool Move(string from, string to)
@@ -153,6 +178,7 @@ namespace alquerque
 
             if (positions[from] != currentPlayer) return false;
 
+            // capture
             foreach (var enemy in graph.GetNeighbors(from))
             {
                 foreach (var landing in graph.GetNeighbors(enemy))
@@ -163,7 +189,8 @@ namespace alquerque
                         positions[to] = currentPlayer;
                         positions[from] = " ";
 
-                        if (!TryMultipleCaptures(to, currentPlayer))
+                        // multiple capture check
+                        if (!HasCaptureAvailable(to, currentPlayer))
                             isPlayer1Turn = !isPlayer1Turn;
 
                         return true;
@@ -171,6 +198,7 @@ namespace alquerque
                 }
             }
 
+            // normal move
             if (CanMove(from, to))
             {
                 positions[to] = currentPlayer;
@@ -184,15 +212,37 @@ namespace alquerque
 
         private bool CanCapture(string from, string enemy, string landing)
         {
-            return positions.ContainsKey(from) &&
-                   positions.ContainsKey(enemy) &&
-                   positions.ContainsKey(landing) &&
-                   positions[from] != " " &&
-                   positions[enemy] != " " &&
-                   positions[from] != positions[enemy] &&
-                   positions[landing] == " " &&
-                   graph.HasEdge(from, enemy) &&
-                   graph.HasEdge(enemy, landing);
+            if (!positions.ContainsKey(from) || !positions.ContainsKey(enemy) || !positions.ContainsKey(landing))
+                return false;
+
+            string currentPlayer = positions[from];
+
+            if (positions[enemy] == " " || positions[enemy] == currentPlayer) return false;
+            if (positions[landing] != " ") return false;
+            if (!graph.HasEdge(from, enemy) || !graph.HasEdge(enemy, landing)) return false;
+
+            var neighbors = graph.GetNeighbors(from);
+            if (!neighbors.Contains(enemy)) return false;
+
+            // no diagonal capture
+            if (graph.HasEdge(from, landing)) return false;
+
+            return true;
+        }
+
+        private bool HasCaptureAvailable(string currentNode, string currentPlayer)
+        {
+            foreach (var enemy in graph.GetNeighbors(currentNode))
+            {
+                foreach (var landing in graph.GetNeighbors(enemy))
+                {
+                    if (CanCapture(currentNode, enemy, landing))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private bool CanMove(string from, string to)
@@ -201,32 +251,6 @@ namespace alquerque
                    positions.ContainsKey(to) &&
                    positions[to] == " " &&
                    graph.HasEdge(from, to);
-        }
-
-        private bool TryMultipleCaptures(string from, string currentPlayer)
-        {
-            foreach (var enemy in graph.GetNeighbors(from))
-            {
-                foreach (var landing in graph.GetNeighbors(enemy))
-                {
-                    if (positions.ContainsKey(enemy) && positions.ContainsKey(landing))
-                    {
-                        if (positions[enemy] != " " &&
-                            positions[enemy] != currentPlayer &&
-                            positions[landing] == " " &&
-                            graph.HasEdge(from, enemy) &&
-                            graph.HasEdge(enemy, landing))
-                        {
-                            positions[enemy] = " ";
-                            positions[landing] = currentPlayer;
-                            positions[from] = " ";
-
-                            return TryMultipleCaptures(landing, currentPlayer) || true;
-                        }
-                    }
-                }
-            }
-            return false;
         }
 
         private string GetNode(string name)
