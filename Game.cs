@@ -10,14 +10,18 @@ namespace alquerque
     internal class Game
     {
         MatrixGraph graph = new MatrixGraph();
+        Random random = new Random((int)DateTime.Now.Ticks);
 
         private Dictionary<string, string> positions = new Dictionary<string, string>(); // " " = empty, 1 = player1, 2 = player2
         private bool isPlayer1Turn = true; // X, O
 
+        private Stack<Dictionary<string, string>> moveHistoryDict = new Stack<Dictionary<string, string>>();
+        private int maxUndos = 0;
+        private int usedUndos = 0;
+
         public void SetupGame()
         {
             // random turn
-            Random random = new Random((int)DateTime.Now.Ticks);
             isPlayer1Turn = random.Next(0, 2) == 0;
 
             // add all vertices
@@ -92,8 +96,8 @@ namespace alquerque
             graph.AddEdge("m1", "l1"); graph.AddEdge("m1", "l2");
             graph.AddEdge("m2", "l4"); graph.AddEdge("m2", "l5");
 
-                // initialize positions
-                int count = 0;
+            // initialize positions
+            int count = 0;
             foreach (var node in graph.Vertices)
             {
                 if (count < 25)
@@ -125,9 +129,12 @@ namespace alquerque
                     pvp.Start();
                     break;
                 case "2":
-                    // soon
+                    PVE pve = new PVE();
+                    pve.Start();
                     break;
                 case "3":
+                    Console.WriteLine("Press any key to continue...");
+                    Console.ReadKey();
                     Environment.Exit(0);
                     break;
             }
@@ -168,7 +175,28 @@ namespace alquerque
             Console.WriteLine($"                   \\   |               |   /");
             Console.WriteLine($"                    {GetNode("m1")}              {GetNode("m2")}");
             Console.WriteLine();
-            Console.WriteLine($"Player {(isPlayer1Turn ? 1 : 2)}'s Turn ({(isPlayer1Turn ? "X" : "O")}) (type q or quit to give up)");
+            Console.WriteLine($"Player {(isPlayer1Turn ? 1 : 2)}'s Turn ({(isPlayer1Turn ? "X" : "O")}) - type q or quit to give up");
+            Console.WriteLine($"Remaining undos: {GetRemainingUndos()} - type z or undo to revert move");
+        }
+
+        public bool IsGameOver(out string winner)
+        {
+            bool hasX = positions.Values.Any(v => v == "X");
+            bool hasO = positions.Values.Any(v => v == "O");
+
+            if (!hasX)
+            {
+                winner = "Player 2";
+                return true;
+            }
+            else if (!hasO)
+            {
+                winner = "Player 1";
+                return true;
+            }
+
+            winner = null;
+            return false;
         }
 
         public bool Move(string from, string to)
@@ -177,6 +205,9 @@ namespace alquerque
             string currentPlayer = isPlayer1Turn ? "X" : "O";
 
             if (positions[from] != currentPlayer) return false;
+
+            // Save current positions for undo
+            moveHistoryDict.Push(ClonePositions());
 
             // capture
             foreach (var enemy in graph.GetNeighbors(from))
@@ -207,7 +238,40 @@ namespace alquerque
                 return true;
             }
 
+            // move failed, saved state
+            moveHistoryDict.Pop();
             return false;
+        }
+
+        public void SetUndoLimit(int limit)
+        {
+            maxUndos = Math.Min(limit, byte.MaxValue);
+            usedUndos = 0;
+        }
+
+        public bool UndoMove()
+        {
+            if (moveHistoryDict.Count == 0 || usedUndos >= maxUndos)
+                return false;
+
+            // restore the last saved positions
+            positions = moveHistoryDict.Pop();
+
+            // revert turn
+            isPlayer1Turn = !isPlayer1Turn;
+
+            usedUndos++;
+            return true;
+        }
+
+        public int GetRemainingUndos()
+        {
+            return maxUndos - usedUndos;
+        }
+
+        private Dictionary<string, string> ClonePositions()
+        {
+            return positions.ToDictionary(entry => entry.Key, entry => entry.Value);
         }
 
         private bool CanCapture(string from, string enemy, string landing)
@@ -257,5 +321,50 @@ namespace alquerque
         {
             return $"{name}:{positions[name]}";
         }
+
+        // use by PVE class only, do not touch //
+        // ----------------------------------- //
+        public bool IsPlayer1Turn()
+        {
+            return isPlayer1Turn;
+        }
+
+        public IEnumerable<string> GetAllNodes()
+        {
+            return positions.Keys.ToList();
+        }
+
+        public IEnumerable<(string from, string to)> GetAllLegalMovesForCurrentPlayer()
+        {
+            string currentPlayer = isPlayer1Turn ? "X" : "O";
+            var captures = new List<(string from, string to)>();
+            var moves = new List<(string from, string to)>();
+
+            foreach (var from in positions.Keys)
+            {
+                if (positions[from] != currentPlayer) continue;
+
+                // capture moves
+                foreach (var enemy in graph.GetNeighbors(from))
+                {
+                    foreach (var landing in graph.GetNeighbors(enemy))
+                    {
+                        if (CanCapture(from, enemy, landing))
+                            captures.Add((from, landing));
+                    }
+                }
+
+                // normal moves
+                foreach (var to in graph.GetNeighbors(from))
+                {
+                    if (CanMove(from, to))
+                        moves.Add((from, to));
+                }
+            }
+
+            // forced capture!
+            return captures.Count > 0 ? captures : moves;
+        }
+        // ----------------------------------- //
     }
 }

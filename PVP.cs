@@ -12,12 +12,23 @@ namespace alquerque
 
         public void Start()
         {
+            Console.Write("Enter maximum undo times allowed: ");
+            if (int.TryParse(Console.ReadLine(), out int limit) && limit >= 0)
+                game.SetUndoLimit(limit);
+            else
+                game.SetUndoLimit(0); // default no undo
+
             game.SetupGame();
 
             while (true)
             {
-
                 game.DrawBoard();
+
+                if (game.IsGameOver(out string winner))
+                {
+                    Console.WriteLine($"Game Over! {winner} wins!");
+                    break;
+                }
 
                 Console.WriteLine("Enter your move (from to) e.g. b2 d3");
                 Console.Write("> ");
@@ -25,9 +36,29 @@ namespace alquerque
 
                 if (string.IsNullOrWhiteSpace(input)) continue;
 
-                // allow quit
                 if (input == "quit" || input == "q")
+                {
+                    if (game.IsPlayer1Turn())
+                    {
+                        Console.WriteLine("Player 1 gave up! Player 2 wins!");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Player 2 gave up! Player 1 wins!");
+                    }
+                    Console.ReadKey();
                     Environment.Exit(0);
+                }
+
+                if (input == "undo" || input == "z")
+                {
+                    if (!game.UndoMove())
+                        Console.WriteLine("No moves to undo!");
+                    else
+                        Console.WriteLine("Move undone.");
+                    Console.ReadKey();
+                    continue;
+                }
 
                 // parse input
                 string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
